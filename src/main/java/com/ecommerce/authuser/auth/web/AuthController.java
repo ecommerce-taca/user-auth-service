@@ -18,9 +18,12 @@ import com.ecommerce.authuser.auth.application.verification.phone.*;
 import com.ecommerce.authuser.auth.exception.mfa.InvalidMfaVerifyRequestException;
 import com.ecommerce.authuser.auth.exception.mfa.MfaAuthenticationRequiredException;
 import com.ecommerce.authuser.auth.web.mfa.*;
+import com.ecommerce.authuser.auth.web.password.PasswordChangeRequest;
+import com.ecommerce.authuser.auth.web.password.PasswordChangeResponse;
 import com.ecommerce.authuser.auth.web.password.PasswordForgotRequest;
 import com.ecommerce.authuser.auth.web.password.PasswordForgotResponse;
 import com.ecommerce.authuser.auth.web.password.PasswordResetRequest;
+import com.ecommerce.authuser.auth.web.password.PasswordResetResponse;
 import com.ecommerce.authuser.auth.web.session.RefreshRequest;
 import com.ecommerce.authuser.auth.web.session.RefreshResponse;
 import com.ecommerce.authuser.auth.web.signin.SigninRequest;
@@ -79,6 +82,8 @@ public class AuthController {
     private final PasswordForgotService passwordForgotService;
 
     private final PasswordResetService passwordResetService;
+
+    private final PasswordChangeService passwordChangeService;
 
     private final MfaSetupService mfaSetupService;
 
@@ -392,19 +397,82 @@ public class AuthController {
     }
 
     @PostMapping("/password/reset")
-    public ResponseEntity<Void> resetPassword(
-            @Valid @RequestBody PasswordResetRequest request
+    public ResponseEntity<PasswordResetResponse> resetPassword(
+            @Valid @RequestBody PasswordResetRequest request,
+            @RequestHeader(name = "X-Request-ID", required = false) String requestId
     ) {
-        passwordResetService.reset(
+        PasswordResetResult result = passwordResetService.reset(
                 new PasswordResetCommand(
                         request.token(),
                         request.newPassword()
                 )
         );
 
+        PasswordResetResponse response = new PasswordResetResponse(
+                new PasswordResetResponse.Data(
+                        new AuthTokenData(
+                                "Bearer",
+                                result.accessToken(),
+                                result.accessExpiresIn(),
+                                result.refreshToken(),
+                                result.refreshExpiresIn()
+                        )
+                ),
+                new RequestMeta(RequestIdResolver.resolve(requestId))
+        );
+
         return ResponseEntity
-                .noContent()
-                .build();
+                .ok()
+                .header("Cache-Control", "no-store")
+                .header("Pragma", "no-cache")
+                .body(response);
+    }
+
+    @PostMapping("/password/change")
+    public ResponseEntity<PasswordChangeResponse> changePassword(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody PasswordChangeRequest request,
+            @RequestHeader(name = "X-MFA-Step-Up", required = false) String stepUpToken,
+            @RequestHeader(name = "X-Request-ID", required = false) String requestId,
+            HttpServletRequest httpRequest
+    ) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        UUID sessionId = UUID.fromString(jwt.getClaimAsString("session_id"));
+        PasswordChangeResult result = passwordChangeService.change(
+                new PasswordChangeCommand(
+                        userId,
+                        sessionId,
+                        request.currentPassword(),
+                        request.newPassword(),
+                        request.resolvedAllSessions(),
+                        stepUpToken,
+                        httpRequest.getRemoteAddr()
+                )
+        );
+
+        AuthTokenData tokens = result.sessionTokens() == null
+                ? null
+                : new AuthTokenData(
+                        "Bearer",
+                        result.sessionTokens().accessToken(),
+                        result.sessionTokens().accessExpiresIn(),
+                        result.sessionTokens().refreshToken(),
+                        result.sessionTokens().refreshExpiresIn()
+                );
+
+        PasswordChangeResponse response = new PasswordChangeResponse(
+                new PasswordChangeResponse.Data(
+                        result.allSessions(),
+                        result.revokedSessionCount(),
+                        tokens
+                ),
+                new RequestMeta(RequestIdResolver.resolve(requestId))
+        );
+
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("Pragma", "no-cache")
+                .body(response);
     }
 
     @PostMapping("/2fa/setup")

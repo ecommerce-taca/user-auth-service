@@ -3,9 +3,11 @@ package com.ecommerce.authuser.common.web;
 import com.ecommerce.authuser.address.exception.*;
 import com.ecommerce.authuser.audit.exception.InvalidAdminAuditQueryException;
 import com.ecommerce.authuser.auth.exception.mfa.*;
+import com.ecommerce.authuser.auth.exception.password.InvalidCurrentPasswordException;
 import com.ecommerce.authuser.auth.exception.password.InvalidPasswordInputException;
 import com.ecommerce.authuser.auth.exception.password.InvalidPasswordRecoveryInputException;
 import com.ecommerce.authuser.auth.exception.password.InvalidPasswordResetTokenException;
+import com.ecommerce.authuser.auth.exception.password.PasswordReuseException;
 import com.ecommerce.authuser.auth.exception.session.ExpiredRefreshTokenException;
 import com.ecommerce.authuser.auth.exception.session.InvalidRefreshTokenException;
 import com.ecommerce.authuser.auth.exception.session.ReusedRefreshTokenException;
@@ -266,6 +268,24 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "AUTH_INVALID_INPUT",
                 "Mật khẩu mới chưa đáp ứng yêu cầu."
+        );
+    }
+
+    @ExceptionHandler(InvalidCurrentPasswordException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCurrentPassword(InvalidCurrentPasswordException ex) {
+        return buildError(
+                HttpStatus.UNAUTHORIZED,
+                "AUTH_CURRENT_PASSWORD_INVALID",
+                "Mật khẩu hiện tại không đúng."
+        );
+    }
+
+    @ExceptionHandler(PasswordReuseException.class)
+    public ResponseEntity<ApiErrorResponse> handlePasswordReuse(PasswordReuseException ex) {
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                "AUTH_PASSWORD_REUSE",
+                "Mật khẩu mới phải khác mật khẩu hiện tại."
         );
     }
 

@@ -2,7 +2,8 @@ package com.ecommerce.authuser.auth.application.password;
 
 import com.ecommerce.authuser.auth.exception.password.InvalidPasswordInputException;
 import com.ecommerce.authuser.auth.exception.password.InvalidPasswordResetTokenException;
-
+import com.ecommerce.authuser.auth.application.session.SessionTokenIssuer;
+import com.ecommerce.authuser.auth.application.session.SessionTokenPair;
 import com.ecommerce.authuser.auth.security.PasswordHasher;
 import com.ecommerce.authuser.auth.security.TokenHasher;
 
@@ -50,12 +51,14 @@ public class PasswordResetService {
 
     private final PasswordHasher passwordHasher;
 
+    private final SessionTokenIssuer sessionTokenIssuer;
+
     private final OutboxEventRepository outboxEventRepository;
 
     private final OutboxPayloadProtector outboxPayloadProtector;
 
     @Transactional
-    public void reset(PasswordResetCommand command) {
+    public PasswordResetResult reset(PasswordResetCommand command) {
         validateCommand(command);
 
         Instant now = Instant.now();
@@ -105,6 +108,8 @@ public class PasswordResetService {
                         token.revoke(TokenRevokeReason.RESET, now)
         );
 
+        SessionTokenPair sessionTokens = sessionTokenIssuer.issue(user, now);
+
         OutboxEvent passwordChangedEvent =
                 OutboxEvent.create(
                         OutboxAggregateType.USER,
@@ -133,6 +138,13 @@ public class PasswordResetService {
                 );
 
         outboxEventRepository.save(passwordChangedEvent);
+
+        return new PasswordResetResult(
+                sessionTokens.accessToken(),
+                sessionTokens.refreshToken(),
+                sessionTokens.accessExpiresIn(),
+                sessionTokens.refreshExpiresIn()
+        );
     }
 
     private void validateCommand(
