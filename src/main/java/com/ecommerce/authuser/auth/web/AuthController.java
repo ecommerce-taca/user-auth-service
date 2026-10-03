@@ -21,6 +21,7 @@ import com.ecommerce.authuser.auth.web.mfa.*;
 import com.ecommerce.authuser.auth.web.password.PasswordForgotRequest;
 import com.ecommerce.authuser.auth.web.password.PasswordForgotResponse;
 import com.ecommerce.authuser.auth.web.password.PasswordResetRequest;
+import com.ecommerce.authuser.auth.web.password.PasswordResetResponse;
 import com.ecommerce.authuser.auth.web.session.RefreshRequest;
 import com.ecommerce.authuser.auth.web.session.RefreshResponse;
 import com.ecommerce.authuser.auth.web.signin.SigninRequest;
@@ -392,19 +393,35 @@ public class AuthController {
     }
 
     @PostMapping("/password/reset")
-    public ResponseEntity<Void> resetPassword(
-            @Valid @RequestBody PasswordResetRequest request
+    public ResponseEntity<PasswordResetResponse> resetPassword(
+            @Valid @RequestBody PasswordResetRequest request,
+            @RequestHeader(name = "X-Request-ID", required = false) String requestId
     ) {
-        passwordResetService.reset(
+        PasswordResetResult result = passwordResetService.reset(
                 new PasswordResetCommand(
                         request.token(),
                         request.newPassword()
                 )
         );
 
+        PasswordResetResponse response = new PasswordResetResponse(
+                new PasswordResetResponse.Data(
+                        new AuthTokenData(
+                                "Bearer",
+                                result.accessToken(),
+                                result.accessExpiresIn(),
+                                result.refreshToken(),
+                                result.refreshExpiresIn()
+                        )
+                ),
+                new RequestMeta(RequestIdResolver.resolve(requestId))
+        );
+
         return ResponseEntity
-                .noContent()
-                .build();
+                .ok()
+                .header("Cache-Control", "no-store")
+                .header("Pragma", "no-cache")
+                .body(response);
     }
 
     @PostMapping("/2fa/setup")

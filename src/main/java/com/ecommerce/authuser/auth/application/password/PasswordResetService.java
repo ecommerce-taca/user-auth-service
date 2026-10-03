@@ -3,13 +3,20 @@ package com.ecommerce.authuser.auth.application.password;
 import com.ecommerce.authuser.auth.exception.password.InvalidPasswordInputException;
 import com.ecommerce.authuser.auth.exception.password.InvalidPasswordResetTokenException;
 
+import com.ecommerce.authuser.auth.security.AccessTokenService;
 import com.ecommerce.authuser.auth.security.PasswordHasher;
+import com.ecommerce.authuser.auth.security.SecureTokenGenerator;
 import com.ecommerce.authuser.auth.security.TokenHasher;
+
+import com.ecommerce.authuser.common.id.UuidV7Generator;
 
 import com.ecommerce.authuser.outbox.domain.OutboxAggregateType;
 import com.ecommerce.authuser.outbox.domain.OutboxEvent;
 import com.ecommerce.authuser.outbox.repository.OutboxEventRepository;
 import com.ecommerce.authuser.outbox.security.OutboxPayloadProtector;
+
+import com.ecommerce.authuser.rbac.domain.UserRole;
+import com.ecommerce.authuser.rbac.repository.UserRoleRepository;
 
 import com.ecommerce.authuser.token.domain.PasswordResetToken;
 import com.ecommerce.authuser.token.domain.RefreshToken;
@@ -23,6 +30,9 @@ import com.ecommerce.authuser.user.domain.User;
 import com.ecommerce.authuser.user.domain.UserStatus;
 import com.ecommerce.authuser.user.repository.UserRepository;
 
+import static com.ecommerce.authuser.auth.application.support.AuthTokenPolicy.ACCESS_TOKEN_TTL;
+import static com.ecommerce.authuser.auth.application.support.AuthTokenPolicy.REFRESH_TOKEN_TTL;
+
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -31,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -50,12 +61,18 @@ public class PasswordResetService {
 
     private final PasswordHasher passwordHasher;
 
+    private final SecureTokenGenerator tokenGenerator;
+
+    private final AccessTokenService accessTokenService;
+
+    private final UserRoleRepository userRoleRepository;
+
     private final OutboxEventRepository outboxEventRepository;
 
     private final OutboxPayloadProtector outboxPayloadProtector;
 
     @Transactional
-    public void reset(PasswordResetCommand command) {
+    public PasswordResetResult reset(PasswordResetCommand command) {
         validateCommand(command);
 
         Instant now = Instant.now();
@@ -105,6 +122,38 @@ public class PasswordResetService {
                         token.revoke(TokenRevokeReason.RESET, now)
         );
 
+        List<String> roles = userRoleRepository
+                .findAllByUser_IdAndRevokedAtIsNull(user.getId())
+                .stream()
+                .map(UserRole::getRole)
+                .map(role -> role.getRoleKey())
+                .distinct()
+                .sorted()
+                .toList();
+
+        String rawRefreshToken = tokenGenerator.generate();
+
+        UUID sessionId = UuidV7Generator.generate();
+
+        refreshTokenRepository.save(
+                RefreshToken.issue(
+                        user,
+                        tokenHasher.hash(rawRefreshToken),
+                        sessionId,
+                        now,
+                        now.plus(REFRESH_TOKEN_TTL)
+                )
+        );
+
+        String accessToken = accessTokenService.issue(
+                user.getId(),
+                sessionId,
+                roles,
+                user.getEmailVerifiedAt() != null,
+                now,
+                now.plus(ACCESS_TOKEN_TTL)
+        );
+
         OutboxEvent passwordChangedEvent =
                 OutboxEvent.create(
                         OutboxAggregateType.USER,
@@ -133,6 +182,13 @@ public class PasswordResetService {
                 );
 
         outboxEventRepository.save(passwordChangedEvent);
+
+        return new PasswordResetResult(
+                accessToken,
+                rawRefreshToken,
+                ACCESS_TOKEN_TTL.toSeconds(),
+                REFRESH_TOKEN_TTL.toSeconds()
+        );
     }
 
     private void validateCommand(
