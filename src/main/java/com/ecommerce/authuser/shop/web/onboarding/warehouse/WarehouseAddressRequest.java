@@ -38,7 +38,7 @@ public class WarehouseAddressRequest {
 
     @JsonSetter("district")
     public void setDistrict(JsonNode value) {
-        district = readRequiredString(value);
+        district = readOptionalString(value);
     }
 
     @JsonSetter("province")
