@@ -90,7 +90,7 @@ public class UpdateSellerWarehouseService {
 
         String ward = requiredText(address.ward(), 120);
 
-        String district = requiredText(address.district(), 120);
+        String district = optionalText(address.district(), 120);
 
         String province = requiredText(address.province(), 120);
 

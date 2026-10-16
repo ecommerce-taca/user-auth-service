@@ -42,3 +42,10 @@ nullable for backward compatibility.
 Existing records from before migration `V021` keep their province and ward
 names and can have null location codes. Updating one of those records through
 the API supplies and persists canonical codes.
+
+## Seller warehouse address
+
+`PUT /api/v1/seller/onboarding/warehouse` follows the same two-level Vietnam
+administrative model: `address.ward` and `address.province` are required, while
+the legacy `address.district` field is optional. New clients should omit it;
+the service accepts an omitted, `null`, or blank value and stores `null`.
