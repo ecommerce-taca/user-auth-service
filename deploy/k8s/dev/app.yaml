@@ -31,7 +31,7 @@ spec:
               valueFrom: { secretKeyRef: { name: redis-auth, key: password } }
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               valueFrom: { configMapKeyRef: { name: taca-common, key: KAFKA_BROKERS } }
-            - { name: AUTH_PUBLIC_BASE_URL, value: "http://192.168.100.23:30173" }
+            - { name: AUTH_PUBLIC_BASE_URL, value: "https://taca.thanhtanengineer.id.vn" }
             - { name: JWT_KEY_ID, value: auth-user-key-dev-1 }
             - name: AUTH_OUTBOX_ENCRYPTION_KEY_BASE64
               valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_OUTBOX_ENCRYPTION_KEY_BASE64 } }
