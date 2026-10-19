@@ -1,0 +1,70 @@
+# Manifest môi trường K8S dev. Job deploy-dev trong ci.yml thay __IMAGE__ bằng image develop-<sha> rồi kubectl apply.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-auth-service
+  labels: { app: user-auth-service, part-of: taca }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app: user-auth-service }
+  template:
+    metadata:
+      labels: { app: user-auth-service, part-of: taca }
+    spec:
+      containers:
+        - name: app
+          image: __IMAGE__
+          ports:
+            - { name: http, containerPort: 8081 }
+          env:
+            - { name: SPRING_PROFILES_ACTIVE, value: local }
+            - { name: SERVER_PORT, value: "8081" }
+            - { name: DB_URL, value: "jdbc:mysql://mysql-cluster.dev.svc:3306/userdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&tinyInt1isBit=false" }
+            - { name: MYSQL_USER, value: auth_user }
+            - name: MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_DB_PASSWORD } }
+            - { name: REDIS_HOST, value: redis.dev.svc }
+            - { name: REDIS_PORT, value: "6379" }
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: redis-auth, key: password } }
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              valueFrom: { configMapKeyRef: { name: taca-common, key: KAFKA_BROKERS } }
+            - { name: AUTH_PUBLIC_BASE_URL, value: "http://192.168.100.23:30173" }
+            - { name: JWT_KEY_ID, value: auth-user-key-dev-1 }
+            - name: AUTH_OUTBOX_ENCRYPTION_KEY_BASE64
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_OUTBOX_ENCRYPTION_KEY_BASE64 } }
+            - name: AUTH_AUDIT_HASH_KEY_BASE64
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_AUDIT_HASH_KEY_BASE64 } }
+            - name: AUTH_OTP_HASH_KEY_BASE64
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_OTP_HASH_KEY_BASE64 } }
+            - name: AUTH_MFA_ENCRYPTION_KEY_BASE64
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_MFA_ENCRYPTION_KEY_BASE64 } }
+            - name: AUTH_JWT_PRIVATE_KEY_BASE64
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_JWT_PRIVATE_KEY_BASE64 } }
+            - name: AUTH_JWT_PUBLIC_KEY_BASE64
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_JWT_PUBLIC_KEY_BASE64 } }
+            - { name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError" }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8081 }
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8081 }
+            initialDelaySeconds: 120
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-auth-service
+  labels: { app: user-auth-service, part-of: taca }
+spec:
+  selector: { app: user-auth-service }
+  ports:
+    - { name: http, port: 8081, targetPort: 8081 }
