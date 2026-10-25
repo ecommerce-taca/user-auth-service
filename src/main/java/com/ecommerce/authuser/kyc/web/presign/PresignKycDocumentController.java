@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+import static com.ecommerce.authuser.kyc.exception.InvalidKycDocumentException.Reason.REQUEST_INVALID;
+
 @RestController
 @RequestMapping("/api/v1/seller/onboarding/kyc/documents")
 @RequiredArgsConstructor
@@ -40,7 +42,7 @@ public class PresignKycDocumentController {
     ) {
 
         if (request.invalid()) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(REQUEST_INVALID);
         }
 
         UUID userId =
