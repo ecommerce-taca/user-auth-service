@@ -68,6 +68,18 @@ public interface KycDocumentRepository extends JpaRepository<KycDocument, UUID> 
             @Param("shopId") UUID shopId
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select document
+        from KycDocument document
+        where document.id = :documentId
+            and document.kycCase.shop.id = :shopId
+        """)
+    Optional<KycDocument> findByIdAndShopIdIncludingDeletedForUpdate(
+            @Param("documentId") UUID documentId,
+            @Param("shopId") UUID shopId
+    );
+
     @Query("""
         select
             document.kycCase.id as kycCaseId,

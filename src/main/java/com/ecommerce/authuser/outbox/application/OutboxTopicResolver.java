@@ -36,6 +36,10 @@ public class OutboxTopicResolver {
             "shop.kyc.expired"
     );
 
+    public static final Set<String> KYC_EVENT_TYPES = Set.of(
+            "kyc.document.delete_requested"
+    );
+
     private final KafkaTopicProperties topics;
 
     public OutboxTopicResolver(KafkaTopicProperties topics) {
@@ -64,6 +68,10 @@ public class OutboxTopicResolver {
         }
 
         if (SHOP_EVENT_TYPES.contains(eventType)) {
+            return topics.getShopEvents();
+        }
+
+        if (KYC_EVENT_TYPES.contains(eventType)) {
             return topics.getShopEvents();
         }
 

@@ -67,6 +67,9 @@ public class KycDocument {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "deleted_by", columnDefinition = "BINARY(16)")
+    private UUID deletedBy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -200,6 +203,20 @@ public class KycDocument {
         status = KycDocumentStatus.REJECTED;
     }
 
+    public void softDelete(Instant now, UUID actorUserId) {
+        Objects.requireNonNull(now);
+        Objects.requireNonNull(actorUserId);
+
+        if (deletedAt != null) {
+            return;
+        }
+
+        deletedAt = now;
+        deletedBy = actorUserId;
+
+        status = KycDocumentStatus.DELETED;
+    }
+
     public void softDelete(Instant now) {
         Objects.requireNonNull(now);
 
@@ -208,7 +225,6 @@ public class KycDocument {
         }
 
         deletedAt = now;
-
         status = KycDocumentStatus.DELETED;
     }
 
