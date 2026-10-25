@@ -19,6 +19,11 @@ public class MockBankCatalogAdapter implements BankCatalogPort {
                     new BankInfo(
                             "MOCK_BANK",
                             "Mock Bank"
+                    ),
+                    "NCB",
+                    new BankInfo(
+                            "NCB",
+                            "Ngân hàng Quốc Dân (NCB - VNPAY Sandbox)"
                     )
             );
 
