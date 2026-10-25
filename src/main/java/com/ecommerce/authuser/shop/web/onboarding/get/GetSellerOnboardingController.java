@@ -55,6 +55,23 @@ public class GetSellerOnboardingController {
                         )
                         .toList();
 
+        List<GetSellerOnboardingResponse.KycDocument> kycDocuments =
+                result.kycDocuments()
+                        .stream()
+                        .map(document ->
+                                new GetSellerOnboardingResponse.KycDocument(
+                                        document.id(),
+                                        document.documentType(),
+                                        document.originalFileName(),
+                                        document.contentType(),
+                                        document.sizeBytes(),
+                                        document.status(),
+                                        document.uploadedAt(),
+                                        document.rejectionReason()
+                                )
+                        )
+                        .toList();
+
         GetSellerOnboardingResponse response =
                 new GetSellerOnboardingResponse(
                         new GetSellerOnboardingResponse.Data(
@@ -63,7 +80,8 @@ public class GetSellerOnboardingController {
                                 steps,
                                 result.shopStatus(),
                                 result.kycStatus(),
-                                result.blockers()
+                                result.blockers(),
+                                kycDocuments
                         ),
                         new GetSellerOnboardingResponse.Meta(
                                 RequestIdResolver.resolve(requestId)

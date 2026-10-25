@@ -6,6 +6,7 @@ import com.ecommerce.authuser.shop.domain.ShopStatus;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,13 +30,41 @@ public record GetSellerOnboardingResponse(
             @JsonProperty("kyc_status")
             KycStatus kycStatus,
 
-            List<String> blockers
+            List<String> blockers,
+
+            @JsonProperty("kyc_documents")
+            List<KycDocument> kycDocuments
     ) {
     }
 
     public record Step(
             OnboardingStep key,
             boolean completed
+    ) {
+    }
+
+    public record KycDocument(
+            UUID id,
+
+            @JsonProperty("document_type")
+            String documentType,
+
+            @JsonProperty("original_file_name")
+            String originalFileName,
+
+            @JsonProperty("content_type")
+            String contentType,
+
+            @JsonProperty("size_bytes")
+            int sizeBytes,
+
+            String status,
+
+            @JsonProperty("uploaded_at")
+            Instant uploadedAt,
+
+            @JsonProperty("rejection_reason")
+            String rejectionReason
     ) {
     }
 
