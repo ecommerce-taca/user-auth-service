@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import static com.ecommerce.authuser.kyc.exception.InvalidKycDocumentException.Reason.*;
+
 @Service
 @RequiredArgsConstructor
 public class PresignKycDocumentService {
@@ -65,7 +67,7 @@ public class PresignKycDocumentService {
     @Transactional
     public PresignKycDocumentResult presign(PresignKycDocumentCommand command) {
         if (command == null || command.userId() == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(REQUEST_INVALID);
         }
 
         Shop shop = shopRepository
@@ -113,7 +115,7 @@ public class PresignKycDocumentService {
                         sha256
                 )) {
 
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(DUPLICATE);
         }
 
         String objectKey = createObjectKey(
@@ -135,7 +137,7 @@ public class PresignKycDocumentService {
             );
 
         } catch (IllegalArgumentException ex) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(REQUEST_INVALID);
         }
 
         saveDocument(document);
@@ -234,13 +236,13 @@ public class PresignKycDocumentService {
     private String normalizeDocumentType(String value) {
 
         if (value == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(DOCUMENT_TYPE_UNSUPPORTED);
         }
 
         String normalized = value.strip();
 
         if (!SUPPORTED_DOCUMENT_TYPES.contains(normalized)) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(DOCUMENT_TYPE_UNSUPPORTED);
         }
 
         return normalized;
@@ -248,7 +250,7 @@ public class PresignKycDocumentService {
 
     private String sanitizeFileName(String value) {
         if (value == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(FILE_NAME_INVALID);
         }
 
         String normalized = value
@@ -274,7 +276,7 @@ public class PresignKycDocumentService {
                 normalized
         )) {
 
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(FILE_NAME_INVALID);
         }
 
         return normalized;
@@ -288,7 +290,7 @@ public class PresignKycDocumentService {
 
     private String normalizeContentType(String value) {
         if (value == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CONTENT_TYPE_UNSUPPORTED);
         }
 
         String normalized = value
@@ -299,7 +301,7 @@ public class PresignKycDocumentService {
                 && !normalized.equals("image/jpeg")
                 && !normalized.equals("image/png")) {
 
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CONTENT_TYPE_UNSUPPORTED);
         }
 
         return normalized;
@@ -307,7 +309,7 @@ public class PresignKycDocumentService {
 
     private long validateSize(long sizeBytes) {
         if (sizeBytes < 1) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(SIZE_INVALID);
         }
 
         if (sizeBytes > MAX_FILE_SIZE) {
@@ -320,7 +322,7 @@ public class PresignKycDocumentService {
     private String normalizeSha256(String value) {
 
         if (value == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CHECKSUM_INVALID);
         }
 
         String normalized = value
@@ -328,7 +330,7 @@ public class PresignKycDocumentService {
                 .toLowerCase(Locale.ROOT);
 
         if (!normalized.matches("^[0-9a-f]{64}$")) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CHECKSUM_INVALID);
         }
 
         return normalized;
@@ -350,7 +352,7 @@ public class PresignKycDocumentService {
                     case "image/png" ->
                             ".png";
 
-                    default -> throw new InvalidKycDocumentException();
+                    default -> throw new InvalidKycDocumentException(CONTENT_TYPE_UNSUPPORTED);
                 };
 
         return "private/kyc/"
@@ -367,7 +369,7 @@ public class PresignKycDocumentService {
         } catch (DataIntegrityViolationException ex) {
 
             if (containsConstraint(ex, "uk_kyc_doc_checksum")) {
-                throw new InvalidKycDocumentException();
+                throw new InvalidKycDocumentException(DUPLICATE);
             }
 
             throw ex;

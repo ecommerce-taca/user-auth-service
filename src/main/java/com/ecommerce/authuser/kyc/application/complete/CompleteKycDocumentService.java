@@ -8,6 +8,7 @@ import com.ecommerce.authuser.kyc.exception.InvalidKycDocumentException;
 import com.ecommerce.authuser.kyc.exception.KycAlreadyPendingException;
 import com.ecommerce.authuser.kyc.exception.KycDocumentAlreadyCompletedException;
 import com.ecommerce.authuser.kyc.exception.KycDocumentNotFoundException;
+import com.ecommerce.authuser.kyc.exception.KycDocumentTooLargeException;
 
 import com.ecommerce.authuser.kyc.port.KycObjectStoragePort;
 
@@ -35,6 +36,8 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
 
+import static com.ecommerce.authuser.kyc.exception.InvalidKycDocumentException.Reason.*;
+
 @Service
 @RequiredArgsConstructor
 public class CompleteKycDocumentService {
@@ -57,7 +60,7 @@ public class CompleteKycDocumentService {
                 || command.userId() == null
                 || command.documentId() == null) {
 
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(REQUEST_INVALID);
         }
 
         Shop shop = shopRepository
@@ -105,7 +108,7 @@ public class CompleteKycDocumentService {
         KycObjectStoragePort.ObjectMetadata objectMetadata =
                 kycObjectStoragePort
                         .findObjectMetadata(document.getObjectKey())
-                        .orElseThrow(InvalidKycDocumentException::new);
+                        .orElseThrow(() -> new InvalidKycDocumentException(VERIFICATION_FAILED));
 
         validateStorageMetadata(document, objectMetadata);
 
@@ -146,7 +149,7 @@ public class CompleteKycDocumentService {
         }
 
         if (status != KycDocumentStatus.UPLOADING) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(STATE_INVALID);
         }
     }
 
@@ -159,23 +162,28 @@ public class CompleteKycDocumentService {
         if (command.objectKey() == null
                 || !command.objectKey().equals(document.getObjectKey()
         )) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(VERIFICATION_FAILED);
         }
 
-        if (command.sizeBytes() < 1
-                || command.sizeBytes() > MAX_FILE_SIZE
-                || command.sizeBytes()
-                != document.getSizeBytes()) {
+        if (command.sizeBytes() < 1) {
+            throw new InvalidKycDocumentException(SIZE_INVALID);
+        }
 
-            throw new InvalidKycDocumentException();
+        if (command.sizeBytes() > MAX_FILE_SIZE) {
+            throw new KycDocumentTooLargeException();
+        }
+
+        if (command.sizeBytes() != document.getSizeBytes()) {
+
+            throw new InvalidKycDocumentException(VERIFICATION_FAILED);
         }
 
         if (!contentType.equals(document.getContentType())) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(VERIFICATION_FAILED);
         }
 
         if (!sha256.equals(document.getSha256())) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(VERIFICATION_FAILED);
         }
     }
 
@@ -185,23 +193,23 @@ public class CompleteKycDocumentService {
     ) {
 
         if (metadata.sizeBytes() != document.getSizeBytes()) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(VERIFICATION_FAILED);
         }
 
         if (metadata.contentType() == null
                 || !metadata.contentType().equals(document.getContentType())) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(VERIFICATION_FAILED);
         }
 
         if (metadata.sha256() == null
                 || !metadata.sha256().equals(document.getSha256())) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(VERIFICATION_FAILED);
         }
     }
 
     private String normalizeContentType(String value) {
         if (value == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CONTENT_TYPE_UNSUPPORTED);
         }
 
         String normalized = value
@@ -211,7 +219,7 @@ public class CompleteKycDocumentService {
         if (!normalized.equals("application/pdf")
                 && !normalized.equals("image/jpeg")
                 && !normalized.equals("image/png")) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CONTENT_TYPE_UNSUPPORTED);
         }
 
         return normalized;
@@ -219,7 +227,7 @@ public class CompleteKycDocumentService {
 
     private String normalizeSha256(String value) {
         if (value == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CHECKSUM_INVALID);
         }
 
         String normalized = value
@@ -227,7 +235,7 @@ public class CompleteKycDocumentService {
                 .toLowerCase(Locale.ROOT);
 
         if (!normalized.matches("^[0-9a-f]{64}$")) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(CHECKSUM_INVALID);
         }
 
         return normalized;

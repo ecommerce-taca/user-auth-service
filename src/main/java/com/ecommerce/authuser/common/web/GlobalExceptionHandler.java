@@ -448,11 +448,68 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidKycDocumentException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidKycDocument(InvalidKycDocumentException ex) {
-        return buildError(
-                HttpStatus.BAD_REQUEST,
-                "KYC_DOCUMENT_INVALID",
-                "Tài liệu không hợp lệ."
-        );
+        return switch (ex.reason()) {
+            case REQUEST_INVALID -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_REQUEST_INVALID",
+                    "Yêu cầu tài liệu KYC không hợp lệ."
+            );
+            case DOCUMENT_TYPE_UNSUPPORTED -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_TYPE_UNSUPPORTED",
+                    "Loại tài liệu KYC không được hỗ trợ."
+            );
+            case FILE_NAME_INVALID -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_FILENAME_INVALID",
+                    "Tên tệp tài liệu không hợp lệ."
+            );
+            case CONTENT_TYPE_UNSUPPORTED -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_CONTENT_TYPE_UNSUPPORTED",
+                    "Định dạng tệp tài liệu không được hỗ trợ."
+            );
+            case SIZE_INVALID -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_SIZE_INVALID",
+                    "Kích thước tài liệu không hợp lệ."
+            );
+            case CHECKSUM_INVALID -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_CHECKSUM_INVALID",
+                    "Mã kiểm tra SHA-256 không hợp lệ."
+            );
+            case DUPLICATE -> buildError(
+                    HttpStatus.CONFLICT,
+                    "KYC_DOCUMENT_DUPLICATE",
+                    "Tài liệu đã tồn tại."
+            );
+            case STATE_INVALID -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_STATE_INVALID",
+                    "Trạng thái tài liệu không hợp lệ."
+            );
+            case VERIFICATION_FAILED -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_VERIFICATION_FAILED",
+                    "Không thể xác minh tính toàn vẹn của tài liệu."
+            );
+            case UPLOAD_INCOMPLETE -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_UPLOAD_INCOMPLETE",
+                    "Vẫn còn tài liệu chưa tải lên hoàn tất."
+            );
+            case DOCUMENT_REQUIRED -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "KYC_DOCUMENT_REQUIRED",
+                    "Cần ít nhất một tài liệu KYC hợp lệ."
+            );
+            case PROFILE_INCOMPLETE -> buildError(
+                    HttpStatus.BAD_REQUEST,
+                    "SELLER_PROFILE_INCOMPLETE",
+                    "Thông tin hồ sơ người bán chưa hoàn tất."
+            );
+        };
     }
 
     @ExceptionHandler(KycDocumentTooLargeException.class)

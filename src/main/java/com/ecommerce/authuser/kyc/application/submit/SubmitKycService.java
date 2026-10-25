@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.ecommerce.authuser.kyc.exception.InvalidKycDocumentException.Reason.*;
+
 @Service
 @RequiredArgsConstructor
 public class SubmitKycService {
@@ -62,7 +64,7 @@ public class SubmitKycService {
     @Transactional
     public SubmitKycResult submit(SubmitKycCommand command) {
         if (command == null || command.userId() == null) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(REQUEST_INVALID);
         }
 
         Shop shop = shopRepository
@@ -95,12 +97,12 @@ public class SubmitKycService {
                 );
 
         if (!onboarding.isProfileCompleted()) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(PROFILE_INCOMPLETE);
         }
 
         KycCase kycCase = kycCaseRepository
                 .findCurrentByShopIdForUpdate(shop.getId())
-                .orElseThrow(InvalidKycDocumentException::new);
+                .orElseThrow(() -> new InvalidKycDocumentException(DOCUMENT_REQUIRED));
 
         validateKycCaseState(kycCase);
 
@@ -110,7 +112,7 @@ public class SubmitKycService {
                         KycDocumentStatus.UPLOADING
                 )) {
 
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(UPLOAD_INCOMPLETE);
         }
 
         List<KycDocumentStatus> validStatuses =
@@ -126,7 +128,7 @@ public class SubmitKycService {
                 );
 
         if (!hasValidDocument) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(DOCUMENT_REQUIRED);
         }
 
         List<String> documentTypes = kycDocumentRepository

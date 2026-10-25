@@ -26,6 +26,8 @@ import tools.jackson.databind.JsonNode;
 
 import java.util.UUID;
 
+import static com.ecommerce.authuser.kyc.exception.InvalidKycDocumentException.Reason.REQUEST_INVALID;
+
 @RestController
 @RequestMapping("/api/v1/seller/onboarding/kyc")
 @RequiredArgsConstructor
@@ -76,7 +78,7 @@ public class SubmitKycController {
         }
 
         if (!body.isObject() || body.size() != 0) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(REQUEST_INVALID);
         }
     }
 
@@ -86,7 +88,7 @@ public class SubmitKycController {
             return UUID.fromString(value);
 
         } catch (IllegalArgumentException | NullPointerException ex) {
-            throw new InvalidKycDocumentException();
+            throw new InvalidKycDocumentException(REQUEST_INVALID);
         }
     }
 }
