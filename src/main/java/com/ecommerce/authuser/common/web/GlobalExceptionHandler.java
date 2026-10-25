@@ -548,6 +548,30 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(KycDocumentDeleteNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse> handleKycDocumentDeleteNotAllowed(
+            KycDocumentDeleteNotAllowedException ex
+    ) {
+        return buildError(
+                HttpStatus.CONFLICT,
+                "KYC_DOCUMENT_DELETE_NOT_ALLOWED",
+                "KYC documents cannot be deleted while the application is pending review or approved.",
+                java.util.Map.of("kyc_status", ex.getKycStatus().name())
+        );
+    }
+
+    @ExceptionHandler(InvalidKycDocumentIdException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidKycDocumentId(
+            InvalidKycDocumentIdException ex
+    ) {
+        return buildError(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "VALIDATION_ERROR",
+                "documentId must be a valid UUID.",
+                java.util.Map.of("field", "documentId")
+        );
+    }
+
     @ExceptionHandler(KycDocumentAlreadyCompletedException.class)
     public ResponseEntity<ApiErrorResponse> handleKycDocumentAlreadyCompleted(KycDocumentAlreadyCompletedException ex) {
         return buildError(
