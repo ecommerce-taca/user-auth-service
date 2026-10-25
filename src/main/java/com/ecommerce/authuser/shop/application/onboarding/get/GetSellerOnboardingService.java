@@ -1,5 +1,10 @@
 package com.ecommerce.authuser.shop.application.onboarding.get;
 
+import com.ecommerce.authuser.kyc.domain.KycCase;
+import com.ecommerce.authuser.kyc.domain.KycDocument;
+import com.ecommerce.authuser.kyc.domain.KycDocumentStatus;
+import com.ecommerce.authuser.kyc.repository.KycCaseRepository;
+import com.ecommerce.authuser.kyc.repository.KycDocumentRepository;
 import com.ecommerce.authuser.rbac.domain.RbacKeys;
 import com.ecommerce.authuser.rbac.repository.UserRoleRepository;
 
@@ -18,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -29,6 +35,10 @@ public class GetSellerOnboardingService {
     private final SellerOnboardingRepository sellerOnboardingRepository;
 
     private final UserRoleRepository userRoleRepository;
+
+    private final KycCaseRepository kycCaseRepository;
+
+    private final KycDocumentRepository kycDocumentRepository;
 
     @Transactional(readOnly = true)
     public GetSellerOnboardingResult get(
@@ -86,13 +96,75 @@ public class GetSellerOnboardingService {
                         )
                 );
 
+        List<GetSellerOnboardingResult.KycDocumentResult> kycDocuments =
+                loadKycDocuments(shop);
+
         return new GetSellerOnboardingResult(
                 shop.getId(),
                 onboarding.getCurrentStep(),
                 steps,
                 shop.getStatus(),
                 shop.getKycStatus(),
-                onboarding.getBlockers()
+                onboarding.getBlockers(),
+                kycDocuments
         );
+    }
+
+    private List<GetSellerOnboardingResult.KycDocumentResult> loadKycDocuments(
+            Shop shop
+    ) {
+        KycCase kycCase = kycCaseRepository
+                .findFirstByShop_IdOrderBySourceVersionDesc(shop.getId())
+                .orElse(null);
+
+        if (kycCase == null) {
+            return List.of();
+        }
+
+        Comparator<KycDocument> newestUploadedFirst =
+                Comparator.comparing(
+                                KycDocument::getUploadedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder())
+                        )
+                        .thenComparing(
+                                KycDocument::getCreatedAt,
+                                Comparator.reverseOrder()
+                        );
+
+        return kycDocumentRepository
+                .findAllByKycCase_IdAndDeletedAtIsNullOrderByCreatedAtAsc(
+                        kycCase.getId()
+                )
+                .stream()
+                .sorted(newestUploadedFirst)
+                .map(this::toKycDocumentResult)
+                .toList();
+    }
+
+    private GetSellerOnboardingResult.KycDocumentResult toKycDocumentResult(
+            KycDocument document
+    ) {
+        return new GetSellerOnboardingResult.KycDocumentResult(
+                document.getId(),
+                document.getDocumentType(),
+                document.getOriginalFileName(),
+                document.getContentType(),
+                document.getSizeBytes(),
+                toApiStatus(document.getStatus()),
+                document.getUploadedAt(),
+                null
+        );
+    }
+
+    private String toApiStatus(KycDocumentStatus status) {
+        return switch (status) {
+            case UPLOADING -> "PENDING_UPLOAD";
+            case UPLOADED -> "UPLOADED";
+            case VERIFIED -> "VERIFIED";
+            case REJECTED, EXPIRED -> "REJECTED";
+            case DELETED -> throw new IllegalStateException(
+                    "Deleted KYC document must not be exposed"
+            );
+        };
     }
 }
