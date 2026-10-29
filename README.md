@@ -244,6 +244,26 @@ Ví dụ body:
 }
 ```
 
+### Google Sign-In
+
+```http
+POST /api/v1/auth/google
+Content-Type: application/json
+```
+
+Body nhận Google ID token từ frontend:
+
+```json
+{
+  "id_token": "<google-id-token>"
+}
+```
+
+Service xác minh ID token với Google, sau đó trả access/refresh token nội bộ.
+Google user mới được tạo buyer account; Google user đã tồn tại sẽ đăng nhập.
+Xem chi tiết về lỗi và liên kết tài khoản email/mật khẩu tại
+[`docs/google-signin-contract.md`](docs/google-signin-contract.md).
+
 ### Refresh token
 
 ```http

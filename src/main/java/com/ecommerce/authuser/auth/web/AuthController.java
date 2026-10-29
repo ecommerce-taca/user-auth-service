@@ -6,6 +6,11 @@ import com.ecommerce.authuser.auth.application.session.*;
 import com.ecommerce.authuser.auth.application.signin.SigninCommand;
 import com.ecommerce.authuser.auth.application.signin.SigninResult;
 import com.ecommerce.authuser.auth.application.signin.SigninService;
+import com.ecommerce.authuser.auth.application.google.GoogleIdentityLinkService;
+import com.ecommerce.authuser.auth.application.google.GoogleSigninCommand;
+import com.ecommerce.authuser.auth.application.google.GoogleSigninResult;
+import com.ecommerce.authuser.auth.application.google.GoogleSigninService;
+import com.ecommerce.authuser.auth.google.GoogleAuthorizationService;
 import com.ecommerce.authuser.auth.application.signout.SignoutCommand;
 import com.ecommerce.authuser.auth.web.common.AuthTokenData;
 import com.ecommerce.authuser.auth.web.session.SignoutRequest;
@@ -28,6 +33,10 @@ import com.ecommerce.authuser.auth.web.session.RefreshRequest;
 import com.ecommerce.authuser.auth.web.session.RefreshResponse;
 import com.ecommerce.authuser.auth.web.signin.SigninRequest;
 import com.ecommerce.authuser.auth.web.signin.SigninResponse;
+import com.ecommerce.authuser.auth.web.google.GoogleIdentityLinkRequest;
+import com.ecommerce.authuser.auth.web.google.GoogleIdentityLinkResponse;
+import com.ecommerce.authuser.auth.web.google.GoogleSigninRequest;
+import com.ecommerce.authuser.auth.web.google.GoogleSigninResponse;
 import com.ecommerce.authuser.auth.web.signup.SignupRequest;
 import com.ecommerce.authuser.auth.web.signup.SignupResponse;
 import com.ecommerce.authuser.auth.web.verification.email.EmailResendRequest;
@@ -45,6 +54,7 @@ import com.ecommerce.authuser.common.web.RequestMeta;
 import com.ecommerce.authuser.mfa.domain.MfaMethod;
 import com.ecommerce.authuser.mfa.domain.MfaPurpose;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
@@ -66,6 +76,12 @@ public class AuthController {
     private final SignupService signupService;
 
     private final SigninService signinService;
+
+    private final GoogleSigninService googleSigninService;
+
+    private final GoogleIdentityLinkService googleIdentityLinkService;
+
+    private final GoogleAuthorizationService googleAuthorizationService;
 
     private final RefreshService refreshService;
 
@@ -194,6 +210,77 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/google")
+    public ResponseEntity<GoogleSigninResponse> signinWithGoogle(
+            @Valid @RequestBody GoogleSigninRequest request,
+            @RequestHeader(name = "X-Request-ID", required = false) String requestId,
+            HttpServletRequest httpRequest
+    ) {
+        GoogleSigninResult result = googleSigninService.signin(new GoogleSigninCommand(
+                request.idToken(),
+                httpRequest.getRemoteAddr(),
+                httpRequest.getHeader("User-Agent")
+        ));
+
+        GoogleSigninResponse response = new GoogleSigninResponse(
+                new GoogleSigninResponse.Data(
+                        new SigninResponse.UserData(
+                                result.userId(), result.fullName(), result.email(), result.emailVerified(),
+                                result.phone(), result.phoneVerified(), result.roles(), result.status()),
+                        new AuthTokenData(
+                                "Bearer", result.accessToken(), result.accessExpiresIn(),
+                                result.refreshToken(), result.refreshExpiresIn()),
+                        result.created()),
+                new RequestMeta(RequestIdResolver.resolve(requestId)));
+
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("Pragma", "no-cache")
+                .body(response);
+    }
+
+    @GetMapping("/google/authorize")
+    public ResponseEntity<Void> beginGoogleAuthorization(HttpServletResponse httpResponse) {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(java.net.URI.create(googleAuthorizationService.begin(httpResponse)))
+                .build();
+    }
+
+    @GetMapping("/google/callback")
+    public ResponseEntity<GoogleSigninResponse> googleAuthorizationCallback(
+            @RequestParam(name = "code", required = false) String code,
+            @RequestParam(name = "state", required = false) String state,
+            @RequestParam(name = "error", required = false) String error,
+            @RequestHeader(name = "X-Request-ID", required = false) String requestId,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        if (error != null && !error.isBlank()) {
+            throw new com.ecommerce.authuser.auth.google.InvalidGoogleIdTokenException();
+        }
+        String idToken = googleAuthorizationService.exchange(httpRequest, httpResponse, code, state);
+        GoogleSigninResult result = googleSigninService.signin(new GoogleSigninCommand(
+                idToken, httpRequest.getRemoteAddr(), httpRequest.getHeader("User-Agent")));
+        return googleSigninResponse(result, requestId);
+    }
+
+    @PostMapping("/identities/google/link")
+    public ResponseEntity<GoogleIdentityLinkResponse> linkGoogleIdentity(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody GoogleIdentityLinkRequest request,
+            @RequestHeader(name = "X-Request-ID", required = false) String requestId
+    ) {
+        boolean linked = googleIdentityLinkService.link(
+                UUID.fromString(jwt.getSubject()), request.idToken());
+
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("Pragma", "no-cache")
+                .body(new GoogleIdentityLinkResponse(
+                        new GoogleIdentityLinkResponse.Data(linked),
+                        new RequestMeta(RequestIdResolver.resolve(requestId))));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<RefreshResponse> refresh(
             @Valid @RequestBody RefreshRequest request,
@@ -307,6 +394,23 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
                 .body(response);
+    }
+
+    private ResponseEntity<GoogleSigninResponse> googleSigninResponse(
+            GoogleSigninResult result,
+            String requestId
+    ) {
+        GoogleSigninResponse response = new GoogleSigninResponse(
+                new GoogleSigninResponse.Data(
+                        new SigninResponse.UserData(
+                                result.userId(), result.fullName(), result.email(), result.emailVerified(),
+                                result.phone(), result.phoneVerified(), result.roles(), result.status()),
+                        new AuthTokenData("Bearer", result.accessToken(), result.accessExpiresIn(),
+                                result.refreshToken(), result.refreshExpiresIn()),
+                        result.created()),
+                new RequestMeta(RequestIdResolver.resolve(requestId)));
+        return ResponseEntity.ok().header("Cache-Control", "no-store")
+                .header("Pragma", "no-cache").body(response);
     }
 
     @PostMapping("/phone/request-otp")

@@ -173,10 +173,11 @@ public class SigninService {
             }
         }
 
-        boolean passwordMatches = passwordHasher.matches(
-                command.password(),
-                user.getPasswordHash()
-        );
+        boolean passwordMatches = user.getPasswordHash() != null
+                && passwordHasher.matches(
+                        command.password(),
+                        user.getPasswordHash()
+                );
 
         if (!passwordMatches) {
             user.recordLoginFailure(now);

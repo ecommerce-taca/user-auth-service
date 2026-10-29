@@ -60,7 +60,8 @@ public class PasswordChangeService {
                 .findByIdForUpdate(command.userId())
                 .orElseThrow(InvalidCurrentPasswordException::new);
 
-        if (!passwordHasher.matches(command.currentPassword(), user.getPasswordHash())) {
+        if (user.getPasswordHash() == null
+                || !passwordHasher.matches(command.currentPassword(), user.getPasswordHash())) {
             throw new InvalidCurrentPasswordException();
         }
 

@@ -24,6 +24,10 @@ import com.ecommerce.authuser.auth.exception.verification.phone.InvalidOtpExcept
 import com.ecommerce.authuser.auth.exception.verification.phone.InvalidPhoneFormatException;
 import com.ecommerce.authuser.auth.exception.verification.phone.OtpAttemptsExceededException;
 import com.ecommerce.authuser.auth.exception.verification.phone.OtpRateLimitedException;
+import com.ecommerce.authuser.auth.application.google.GoogleAccountLinkRequiredException;
+import com.ecommerce.authuser.auth.application.google.GoogleIdentityAlreadyLinkedException;
+import com.ecommerce.authuser.auth.google.GoogleSigninUnavailableException;
+import com.ecommerce.authuser.auth.google.InvalidGoogleIdTokenException;
 import com.ecommerce.authuser.common.id.UuidV7Generator;
 
 import com.ecommerce.authuser.favorite.exception.FavoriteLimitReachedException;
@@ -94,6 +98,30 @@ public class GlobalExceptionHandler {
                 "AUTH_INVALID_CREDENTIALS",
                 "Email/số điện thoại hoặc mật khẩu không đúng."
         );
+    }
+
+    @ExceptionHandler(InvalidGoogleIdTokenException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidGoogleIdToken(InvalidGoogleIdTokenException ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, "AUTH_GOOGLE_TOKEN_INVALID",
+                "Google ID token khÃ´ng hợp lệ.");
+    }
+
+    @ExceptionHandler(GoogleSigninUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleGoogleSigninUnavailable(GoogleSigninUnavailableException ex) {
+        return buildError(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_GOOGLE_UNAVAILABLE",
+                "ÄÄƒng nhập Google chưa Ä‘Æ°á»£c cấu hÃ¬nh.");
+    }
+
+    @ExceptionHandler(GoogleAccountLinkRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleGoogleAccountLinkRequired(GoogleAccountLinkRequiredException ex) {
+        return buildError(HttpStatus.CONFLICT, "AUTH_GOOGLE_LINK_REQUIRED",
+                "TÃ i khoản cÃ³ email nÃ y cần Ä‘Æ°á»£c liÃªn kết Google sau khi Ä‘Äƒng nhập.");
+    }
+
+    @ExceptionHandler(GoogleIdentityAlreadyLinkedException.class)
+    public ResponseEntity<ApiErrorResponse> handleGoogleIdentityAlreadyLinked(GoogleIdentityAlreadyLinkedException ex) {
+        return buildError(HttpStatus.CONFLICT, "AUTH_GOOGLE_IDENTITY_LINKED",
+                "TÃ i khoản Google Ä‘Ã£ Ä‘Æ°á»£c liÃªn kết vá»›i ngÆ°á»i dÃ¹ng khÃ¡c.");
     }
 
     @ExceptionHandler(AccountSuspendedException.class)

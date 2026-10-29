@@ -55,11 +55,19 @@ public class SecurityConfig {
                                         HttpMethod.POST,
                                         "/api/v1/auth/signup",
                                         "/api/v1/auth/signin",
+                                        "/api/v1/auth/google",
                                         "/api/v1/auth/refresh",
                                         "/api/v1/auth/email/verify",
                                         "/api/v1/auth/password/forgot",
                                         "/api/v1/auth/password/reset",
                                         "/api/v1/auth/2fa/verify"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/auth/google/authorize",
+                                        "/api/v1/auth/google/callback"
                                 )
                                 .permitAll()
                                 .anyRequest()
