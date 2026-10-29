@@ -71,6 +71,14 @@ auth:
   email-verification:
     ttl-minutes: ${AUTH_EMAIL_VERIFICATION_TTL_MINUTES:30}
 
+  google:
+    allowed-client-ids: ${AUTH_GOOGLE_ALLOWED_CLIENT_IDS:}
+    jwk-set-uri: ${AUTH_GOOGLE_JWK_SET_URI:https://www.googleapis.com/oauth2/v3/certs}
+    authorization-client-id: ${AUTH_GOOGLE_AUTHORIZATION_CLIENT_ID:}
+    authorization-client-secret: ${AUTH_GOOGLE_AUTHORIZATION_CLIENT_SECRET:}
+    authorization-redirect-uri: ${AUTH_GOOGLE_AUTHORIZATION_REDIRECT_URI:}
+    authorization-cookie-secure: ${AUTH_GOOGLE_AUTHORIZATION_COOKIE_SECURE:true}
+
   audit:
     hash-key-base64: ${AUTH_AUDIT_HASH_KEY_BASE64}
 

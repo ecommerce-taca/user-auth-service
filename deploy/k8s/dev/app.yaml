@@ -34,6 +34,14 @@ spec:
             - { name: AUTH_PUBLIC_BASE_URL, value: "https://taca.thanhtanengineer.id.vn" }
             # Route xác minh của web-service là /verify-email (VerifyEmailPage đọc ?t=); mặc định /verify không có route
             - { name: AUTH_EMAIL_VERIFICATION_PATH, value: /verify-email }
+            - name: AUTH_GOOGLE_ALLOWED_CLIENT_IDS
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_GOOGLE_ALLOWED_CLIENT_IDS } }
+            - name: AUTH_GOOGLE_AUTHORIZATION_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_GOOGLE_AUTHORIZATION_CLIENT_ID } }
+            - name: AUTH_GOOGLE_AUTHORIZATION_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_GOOGLE_AUTHORIZATION_CLIENT_SECRET } }
+            - { name: AUTH_GOOGLE_AUTHORIZATION_REDIRECT_URI, value: "https://<auth-api-domain>/api/v1/auth/google/callback" }
+            - { name: AUTH_GOOGLE_AUTHORIZATION_COOKIE_SECURE, value: "true" }
             - { name: JWT_KEY_ID, value: auth-user-key-dev-1 }
             - name: AUTH_OUTBOX_ENCRYPTION_KEY_BASE64
               valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_OUTBOX_ENCRYPTION_KEY_BASE64 } }
