@@ -70,6 +70,16 @@ class GetShopPickupAddressServiceTest {
     }
 
     @Test
+    void get_shouldRejectShopWithoutWarehouseSnapshot() {
+        shop(ShopStatus.DRAFT, null, Instant.now());
+
+        assertThrows(
+                ShopWarehouseMissingException.class,
+                () -> service.get(new GetShopPickupAddressQuery(shopId))
+        );
+    }
+
+    @Test
     void get_shouldRejectUnknownOrDeletedShop() {
         when(shopRepository.findByIdAndDeletedAtIsNull(shopId)).thenReturn(Optional.empty());
 

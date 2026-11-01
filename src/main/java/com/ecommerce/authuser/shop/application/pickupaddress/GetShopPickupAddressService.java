@@ -44,7 +44,7 @@ public class GetShopPickupAddressService {
             throw new ShopNotFoundException();
         }
 
-        Map<String, Object> warehouse = shop.getWarehouseSnapshot();
+        Map<String, Object> warehouse = asMap(shop.getWarehouseSnapshot());
         Map<String, Object> address = asMap(warehouse.get("address"));
 
         String warehouseName = text(warehouse.get("warehouse_name"));
