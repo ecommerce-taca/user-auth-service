@@ -2,6 +2,7 @@ package com.ecommerce.authuser.auth.security;
 
 import com.ecommerce.authuser.auth.config.JwtKeyProperties;
 import com.ecommerce.authuser.common.id.UuidV7Generator;
+import com.ecommerce.authuser.rbac.repository.UserRoleRepository;
 import com.ecommerce.authuser.shop.repository.ShopRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -33,6 +35,12 @@ public class JwtAccessTokenService implements AccessTokenService {
     private final JwtKeyProperties jwtKeyProperties;
 
     private final ShopRepository shopRepository;
+
+    private final UserRoleRepository userRoleRepository;
+
+    // Role SYSTEM scope (auth-user LLD §5.3). Chỉ admin mới có permission SYSTEM nên chỉ query cho họ.
+    private static final Set<String> ADMIN_ROLES = Set.of(
+            "SUPER_ADMIN", "RISK_MANAGER", "CATALOG_ADMIN", "FINANCE_OPS", "SUPPORT_VIEWER");
 
     @Override
     public String issue(
@@ -73,6 +81,19 @@ public class JwtAccessTokenService implements AccessTokenService {
             shopRepository
                     .findFirstByOwner_IdAndDeletedAtIsNullOrderByCreatedAtDesc(userId)
                     .ifPresent(shop -> builder.claim("shop_id", shop.getId().toString()));
+        }
+
+        // Claim permissions → Gateway set X-User-Permissions (api-gateway LLD §2.4). Service sở hữu
+        // tài nguyên enforce permission cross-service, ví dụ search-service đọc SEARCH_ADMIN.
+        if (roles.stream().anyMatch(ADMIN_ROLES::contains)) {
+            List<String> permissions = userRoleRepository
+                    .findActiveSystemPermissionKeys(userId)
+                    .stream()
+                    .sorted()
+                    .toList();
+            if (!permissions.isEmpty()) {
+                builder.claim("permissions", permissions);
+            }
         }
 
         JwtClaimsSet claims = builder.build();

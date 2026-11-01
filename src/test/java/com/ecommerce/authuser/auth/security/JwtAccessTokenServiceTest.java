@@ -1,6 +1,7 @@
 package com.ecommerce.authuser.auth.security;
 
 import com.ecommerce.authuser.auth.config.JwtKeyProperties;
+import com.ecommerce.authuser.rbac.repository.UserRoleRepository;
 import com.ecommerce.authuser.shop.domain.Shop;
 import com.ecommerce.authuser.shop.repository.ShopRepository;
 
@@ -31,6 +32,8 @@ class JwtAccessTokenServiceTest {
 
     private final ShopRepository shopRepository = mock(ShopRepository.class);
 
+    private final UserRoleRepository userRoleRepository = mock(UserRoleRepository.class);
+
     private final ArgumentCaptor<JwtEncoderParameters> parameters =
             ArgumentCaptor.forClass(JwtEncoderParameters.class);
 
@@ -41,7 +44,8 @@ class JwtAccessTokenServiceTest {
         service = new JwtAccessTokenService(
                 jwtEncoder,
                 new JwtKeyProperties("kid-test", "priv", "pub", null, null),
-                shopRepository
+                shopRepository,
+                userRoleRepository
         );
         when(jwtEncoder.encode(parameters.capture())).thenReturn(
                 new Jwt("token", NOW, NOW.plusSeconds(900), Map.of("alg", "RS256"), Map.of("sub", "x"))
@@ -80,5 +84,19 @@ class JwtAccessTokenServiceTest {
 
         assertThat(parameters.getValue().getClaims().getClaims()).doesNotContainKey("shop_id");
         verifyNoInteractions(shopRepository);
+        verifyNoInteractions(userRoleRepository);
+        assertThat(parameters.getValue().getClaims().getClaims()).doesNotContainKey("permissions");
+    }
+
+    @Test
+    void adminGetsSystemPermissionsClaim() {
+        UUID userId = UUID.randomUUID();
+        when(userRoleRepository.findActiveSystemPermissionKeys(userId))
+                .thenReturn(List.of("SEARCH_ADMIN", "KYC_READ"));
+
+        service.issue(userId, UUID.randomUUID(), List.of("SUPER_ADMIN"), true, NOW, NOW.plusSeconds(900));
+
+        assertThat(parameters.getValue().getClaims().getClaims())
+                .containsEntry("permissions", List.of("KYC_READ", "SEARCH_ADMIN"));
     }
 }
