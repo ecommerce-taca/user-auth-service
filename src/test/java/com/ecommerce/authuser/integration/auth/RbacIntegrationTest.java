@@ -134,7 +134,9 @@ class RbacIntegrationTest extends BaseIntegrationTest {
                 "USER_READ",
                 "USER_SUSPEND",
                 "ROLE_READ",
-                "ROLE_ASSIGN"
+                "ROLE_ASSIGN",
+                "SEARCH_ADMIN",
+                "VOUCHER_MANAGE"
         );
 
         List<String> shopPermissions = List.of(
@@ -230,7 +232,9 @@ class RbacIntegrationTest extends BaseIntegrationTest {
                 "ROLE_ASSIGN",
                 "SHOP_READ",
                 "SHOP_UPDATE",
-                "SELLER_STAFF_MANAGE"
+                "SELLER_STAFF_MANAGE",
+                "SEARCH_ADMIN",
+                "VOUCHER_MANAGE"
         );
     }
 

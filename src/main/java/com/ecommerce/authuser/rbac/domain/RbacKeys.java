@@ -49,6 +49,12 @@ public final class RbacKeys {
 
         public static final String SELLER_STAFF_MANAGE = "SELLER_STAFF_MANAGE";
 
+        /** Cross-service: enforced by search-service. */
+        public static final String SEARCH_ADMIN = "SEARCH_ADMIN";
+
+        /** Cross-service: enforced by order-commerce. */
+        public static final String VOUCHER_MANAGE = "VOUCHER_MANAGE";
+
         private Permissions() {
         }
     }

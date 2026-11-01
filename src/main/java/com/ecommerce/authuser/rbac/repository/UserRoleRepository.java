@@ -133,4 +133,17 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
             @Param("userId") UUID userId,
             @Param("shopId") UUID shopId
     );
+
+    @Query("""
+        select distinct rp.permission.permissionKey
+        from UserRole ur, RolePermission rp
+        where ur.user.id = :userId
+            and ur.revokedAt is null
+            and ur.role.id = rp.role.id
+            and ur.role.scopeType =
+                com.ecommerce.authuser.rbac.domain.ScopeType.SYSTEM
+        """)
+    List<String> findActiveSystemPermissionKeys(
+            @Param("userId") UUID userId
+    );
 }
