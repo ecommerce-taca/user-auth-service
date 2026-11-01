@@ -52,6 +52,11 @@ spring:
         linger.ms: 5
 
 auth:
+  internal:
+    # X-Internal-Service-Token for /api/v1/internal/** (checkout-service, order-service).
+    # Empty = internal endpoints reject every call.
+    service-token: ${AUTH_USER_INTERNAL_TOKEN:}
+
   outbox:
     encryption-key-base64: ${AUTH_OUTBOX_ENCRYPTION_KEY_BASE64}
 

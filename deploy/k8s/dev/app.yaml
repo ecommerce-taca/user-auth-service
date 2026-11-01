@@ -47,6 +47,8 @@ spec:
               valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_OUTBOX_ENCRYPTION_KEY_BASE64 } }
             - name: AUTH_AUDIT_HASH_KEY_BASE64
               valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_AUDIT_HASH_KEY_BASE64 } }
+            - name: AUTH_USER_INTERNAL_TOKEN
+              valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_USER_INTERNAL_TOKEN, optional: true } }
             - name: AUTH_OTP_HASH_KEY_BASE64
               valueFrom: { secretKeyRef: { name: taca-app-secrets, key: AUTH_OTP_HASH_KEY_BASE64 } }
             - name: AUTH_MFA_ENCRYPTION_KEY_BASE64
