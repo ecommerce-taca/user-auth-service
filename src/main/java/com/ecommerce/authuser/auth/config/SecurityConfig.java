@@ -44,6 +44,14 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
+                                // Internal service-to-service read. Not routed by the Gateway;
+                                // the controller checks X-Internal-Service-Token instead of a JWT.
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/internal/shops/*/pickup-address"
+                                )
+                                .permitAll()
+
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/actuator/health",

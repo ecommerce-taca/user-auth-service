@@ -28,6 +28,9 @@ spring:
     locations: classpath:db/migration
 
 auth:
+  internal:
+    service-token: "test-internal-token"
+
   audit:
     hash-key-base64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   

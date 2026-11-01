@@ -41,6 +41,7 @@ import com.ecommerce.authuser.rbac.exception.InvalidRoleAssignmentException;
 import com.ecommerce.authuser.rbac.exception.RoleAssignmentExistsException;
 import com.ecommerce.authuser.rbac.exception.RoleAssignmentNotFoundException;
 import com.ecommerce.authuser.shop.exception.*;
+import com.ecommerce.authuser.internal.security.InternalServiceTokenInvalidException;
 import com.ecommerce.authuser.shopfollow.exception.InvalidShopFollowInputException;
 import com.ecommerce.authuser.shopfollow.exception.InvalidShopFollowQueryException;
 import com.ecommerce.authuser.shopfollow.exception.ShopFollowLimitReachedException;
@@ -462,6 +463,24 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 "SHOP_NOT_FOUND",
                 "Không tìm thấy gian hàng."
+        );
+    }
+
+    @ExceptionHandler(ShopWarehouseMissingException.class)
+    public ResponseEntity<ApiErrorResponse> handleShopWarehouseMissing(ShopWarehouseMissingException ex) {
+        return buildError(
+                HttpStatus.CONFLICT,
+                "SHOP_WAREHOUSE_MISSING",
+                "Gian hàng chưa có địa chỉ lấy hàng."
+        );
+    }
+
+    @ExceptionHandler(InternalServiceTokenInvalidException.class)
+    public ResponseEntity<ApiErrorResponse> handleInternalServiceTokenInvalid(InternalServiceTokenInvalidException ex) {
+        return buildError(
+                HttpStatus.UNAUTHORIZED,
+                "AUTH_TOKEN_INVALID",
+                "Token nội bộ không hợp lệ."
         );
     }
 
