@@ -8,7 +8,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/userdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&tinyInt1isBit=false}
     username: ${MYSQL_USER:ecommerce}
-    password: ${MYSQL_PASSWORD:nhat15042005}
+    password: ${MYSQL_PASSWORD}
 
   jpa:
     open-in-view: false
